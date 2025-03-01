@@ -1,13 +1,20 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import AnimatedLogo from './AnimatedLogo';
+import { useToast } from '@/hooks/use-toast';
+import { isLoggedIn, logoutUser, getCurrentUser } from '@/utils/userStorage';
 
 const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userLoggedIn, setUserLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
+  
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const location = useLocation();
   
   useEffect(() => {
@@ -20,122 +27,152 @@ const Navbar = () => {
   }, []);
   
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setUserLoggedIn(isLoggedIn());
+    const user = getCurrentUser();
+    if (user) {
+      setUserName(user.name);
+    }
   }, [location.pathname]);
   
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Jobs', path: '/jobs' },
-  ];
+  const handleLogout = () => {
+    logoutUser();
+    setUserLoggedIn(false);
+    setUserName('');
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out."
+    });
+    navigate('/');
+  };
   
   return (
-    <nav className={cn(
-      "fixed top-0 inset-x-0 z-50 transition-all duration-300 ease-in-out py-4",
-      isScrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-transparent"
-    )}>
-      <div className="page-container">
-        <div className="flex items-center justify-between">
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-background/90 backdrop-blur-sm border-b' : 'bg-background/50'}`}>
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo and brand name */}
           <Link to="/" className="flex items-center space-x-2">
-            <AnimatedLogo className="h-10 w-10" />
-            <span className="font-semibold text-xl tracking-tight">SmartJob</span>
+            <AnimatedLogo className="h-8 w-8" />
+            <span className="font-bold text-lg">Smart Job Finder</span>
           </Link>
           
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex space-x-4">
-              {navLinks.map((link) => (
-                <Link 
-                  key={link.path} 
-                  to={link.path}
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200",
-                    location.pathname === link.path 
-                      ? "text-primary font-semibold" 
-                      : "text-foreground/70 hover:text-foreground hover:bg-accent"
-                  )}
-                >
-                  {link.name}
+          {/* Desktop navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+              Home
+            </Link>
+            {userLoggedIn && (
+              <>
+                <Link to="/profile" className="text-sm font-medium hover:text-primary transition-colors">
+                  Profile
                 </Link>
-              ))}
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="sm" className="animated-button">
-                  Sign up
-                </Button>
-              </Link>
-            </div>
+                <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+                  Dashboard
+                </Link>
+              </>
+            )}
+            <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+              About
+            </Link>
           </div>
           
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden rounded-md p-2 bg-accent text-foreground"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor" 
-              className="w-6 h-6"
+          {/* Auth buttons or user menu */}
+          <div className="hidden md:flex items-center space-x-4">
+            {userLoggedIn ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm">Hi, {userName}</span>
+                <Button variant="outline" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost">Login</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button>Sign Up</Button>
+                </Link>
+              </>
+            )}
+          </div>
+          
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? (
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M6 18L18 6M6 6l12 12" 
-                />
-              ) : (
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 6h16M4 12h16M4 18h16" 
-                />
-              )}
-            </svg>
-          </button>
+              {isMenuOpen ? <X /> : <Menu />}
+            </Button>
+          </div>
         </div>
         
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 bg-background/90 backdrop-blur-md rounded-lg shadow-lg overflow-hidden animate-slide-down">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={cn(
-                    "block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200",
-                    location.pathname === link.path 
-                      ? "text-primary font-semibold" 
-                      : "text-foreground/70 hover:text-foreground hover:bg-accent"
-                  )}
-                >
-                  {link.name}
-                </Link>
-              ))}
-            </div>
-            <div className="px-5 py-4 border-t border-border/50">
-              <div className="flex items-center space-x-3">
-                <Link to="/login" className="w-full">
-                  <Button variant="outline" size="sm" className="w-full">
-                    Log in
-                  </Button>
-                </Link>
-                <Link to="/signup" className="w-full">
-                  <Button size="sm" className="w-full animated-button">
-                    Sign up
-                  </Button>
-                </Link>
+        {/* Mobile navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 border-t">
+            <div className="flex flex-col space-y-4">
+              <Link 
+                to="/" 
+                className="px-2 py-1 text-sm font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Home
+              </Link>
+              {userLoggedIn && (
+                <>
+                  <Link 
+                    to="/profile" 
+                    className="px-2 py-1 text-sm font-medium hover:text-primary transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <Link 
+                    to="/dashboard" 
+                    className="px-2 py-1 text-sm font-medium hover:text-primary transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                </>
+              )}
+              <Link 
+                to="/about" 
+                className="px-2 py-1 text-sm font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                About
+              </Link>
+              
+              <div className="pt-2 border-t">
+                {userLoggedIn ? (
+                  <>
+                    <div className="px-2 py-1 text-sm">
+                      Logged in as {userName}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-2"
+                      onClick={() => {
+                        handleLogout();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex flex-col space-y-2">
+                    <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full">Login</Button>
+                    </Link>
+                    <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                      <Button className="w-full">Sign Up</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>

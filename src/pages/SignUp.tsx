@@ -1,14 +1,15 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
 import AnimatedLogo from '@/components/AnimatedLogo';
+import { saveUser } from '@/utils/userStorage';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ const SignUp = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -54,15 +56,21 @@ const SignUp = () => {
     try {
       setIsLoading(true);
       
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Save user data (in a real app, we'd send this to a backend)
+      saveUser({
+        name: formData.name,
+        email: formData.email,
+        // In a real app, we'd never store plain passwords
+        // This is just for demo purposes
+      });
       
       toast({
         title: "Account created!",
-        description: "Welcome to Smart Job Finder. You can now sign in with your credentials.",
+        description: "Welcome to Smart Job Finder. Complete your profile to get started."
       });
       
-      // Navigate to login page or dashboard
+      // Navigate to profile completion page
+      navigate('/profile');
     } catch (error) {
       toast({
         title: "Sign up failed",
@@ -101,7 +109,7 @@ const SignUp = () => {
             </p>
           </div>
           
-          <div className="glass-card rounded-lg p-6">
+          <div className="bg-card rounded-lg border p-6 shadow-sm">
             <Button 
               variant="outline" 
               className="w-full flex items-center justify-center space-x-2 h-11"
@@ -198,7 +206,7 @@ const SignUp = () => {
               
               <Button 
                 type="submit" 
-                className="w-full animated-button h-11"
+                className="w-full h-11"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Create Account"}

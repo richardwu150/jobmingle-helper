@@ -1,53 +1,47 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
 import AnimatedLogo from '@/components/AnimatedLogo';
+import { loginUser } from '@/utils/userStorage';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
-  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
-      setIsLoading(true);
+      const user = loginUser(email, password);
       
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Smart Job Finder.",
-      });
-      
-      // Navigate to dashboard
-      window.location.href = '/dashboard';
+      if (user) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Smart Job Finder."
+        });
+        navigate('/profile');
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Invalid email or password.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       toast({
-        title: "Login failed",
-        description: "Invalid email or password. Please try again.",
+        title: "Login error",
+        description: "An unexpected error occurred.",
         variant: "destructive"
       });
     } finally {
@@ -58,12 +52,11 @@ const Login = () => {
   const handleGoogleSignIn = () => {
     setIsLoading(true);
     
-    // Simulate API call with timeout
     setTimeout(() => {
       setIsLoading(false);
       toast({
         title: "Google Sign In",
-        description: "This feature is coming soon.",
+        description: "This feature is coming soon."
       });
     }, 1000);
   };
@@ -78,11 +71,11 @@ const Login = () => {
             <AnimatedLogo className="h-12 w-12 mx-auto mb-4" />
             <h1 className="text-2xl font-bold">Welcome back</h1>
             <p className="text-muted-foreground mt-2">
-              Sign in to continue to Smart Job Finder
+              Sign in to your Smart Job Finder account
             </p>
           </div>
           
-          <div className="glass-card rounded-lg p-6">
+          <div className="bg-card rounded-lg border p-6 shadow-sm">
             <Button 
               variant="outline" 
               className="w-full flex items-center justify-center space-x-2 h-11"
@@ -109,11 +102,10 @@ const Login = () => {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -121,44 +113,23 @@ const Login = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <a 
-                    href="#" 
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
                 <Input
                   id="password"
-                  name="password"
                   type="password"
                   placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
               
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox 
-                  id="rememberMe" 
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, rememberMe: checked === true }))
-                  }
-                />
-                <label 
-                  htmlFor="rememberMe" 
-                  className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Remember me for 30 days
-                </label>
-              </div>
-              
               <Button 
                 type="submit" 
-                className="w-full animated-button h-11"
+                className="w-full h-11"
                 disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign In"}
@@ -168,7 +139,7 @@ const Login = () => {
           
           <div className="text-center mt-6">
             <p className="text-sm text-muted-foreground">
-              Don't have an account yet?{" "}
+              Don't have an account?{" "}
               <Link to="/signup" className="text-primary font-medium hover:underline">
                 Sign up
               </Link>
