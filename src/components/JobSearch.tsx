@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -7,12 +7,28 @@ import { useToast } from '@/hooks/use-toast';
 import { searchJobs, getJobSearchResults } from '@/utils/jobSearchService';
 import { getCurrentUser } from '@/utils/userStorage';
 import JobCard from '@/components/JobCard';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const JobSearch = () => {
   const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [jobResults, setJobResults] = useState<any[]>([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resultsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  useEffect(() => {
+    // Check if we already have search results
+    const results = getJobSearchResults();
+    if (results && results.jobs.length > 0) {
+      setJobResults(results.jobs);
+      setTotalPages(Math.ceil(results.jobs.length / resultsPerPage));
+      setSearchCompleted(true);
+    }
+  }, [resultsPerPage]);
   
   const handleSearch = async () => {
     const currentUser = getCurrentUser();
@@ -51,6 +67,9 @@ const JobSearch = () => {
       
       if (results && results.jobs.length > 0) {
         setJobResults(results.jobs);
+        setTotalPages(Math.ceil(results.jobs.length / resultsPerPage));
+        setCurrentPage(1); // Reset to first page
+        
         toast({
           title: "Job search complete",
           description: `Found ${results.jobs.length} matching jobs based on your resume`,
@@ -72,6 +91,28 @@ const JobSearch = () => {
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+  
+  // Get current page results
+  const getCurrentPageResults = () => {
+    const indexOfLastResult = currentPage * resultsPerPage;
+    const indexOfFirstResult = indexOfLastResult - resultsPerPage;
+    return jobResults.slice(indexOfFirstResult, indexOfLastResult);
+  };
+  
+  // Handle pagination
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
   
@@ -116,21 +157,60 @@ const JobSearch = () => {
       
       {searchCompleted && jobResults.length > 0 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold">Results ({jobResults.length} jobs found)</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-semibold">Results ({jobResults.length} jobs found)</h3>
+            <div className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * resultsPerPage + 1}-
+              {Math.min(currentPage * resultsPerPage, jobResults.length)} of {jobResults.length}
+            </div>
+          </div>
+          
           <div className="space-y-4">
-            {jobResults.map((job) => (
+            {getCurrentPageResults().map((job) => (
               <JobCard 
                 key={job.id}
+                id={job.id}
                 title={job.title}
                 company={job.company}
                 location={job.location}
                 description={job.description}
-                url={job.url}
                 matchScore={job.matchScore}
-                postedDate={job.postedDate}
+                type={job.type}
+                salary={job.salary}
+                posted={job.posted}
+                skills={job.skills}
+                logo={job.logo}
+                url={job.url}
               />
             ))}
           </div>
+          
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="text-sm">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
       

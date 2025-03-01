@@ -1,59 +1,119 @@
 
 import { getCurrentUser, updateCurrentUser } from './userStorage';
 
-// Mock job data (in a real app, this would come from an API)
-const mockJobs = [
-  {
-    id: '1',
-    title: 'Frontend Developer',
-    company: 'TechCorp',
-    location: 'Remote',
-    description: 'We are looking for a skilled Frontend Developer with experience in React, TypeScript, and Tailwind CSS. The ideal candidate should have at least 3 years of experience building modern web applications.',
-    url: 'https://example.com/job/1',
-    postedDate: '2023-05-15',
-  },
-  {
-    id: '2',
-    title: 'Full Stack Engineer',
-    company: 'InnovateTech',
-    location: 'San Francisco, CA',
-    description: 'Seeking a Full Stack Engineer proficient in React, Node.js, and MongoDB. Experience with cloud services (AWS/GCP) is a plus. You will work on developing and maintaining our core product features.',
-    url: 'https://example.com/job/2',
-    postedDate: '2023-05-18',
-  },
-  {
-    id: '3',
-    title: 'UI/UX Designer',
-    company: 'DesignHub',
-    location: 'New York, NY',
-    description: 'Looking for a talented UI/UX Designer with a strong portfolio. Experience with Figma and Adobe Creative Suite required. Knowledge of frontend development is a plus.',
-    url: 'https://example.com/job/3',
-    postedDate: '2023-05-12',
-  },
-  {
-    id: '4',
-    title: 'Backend Developer',
-    company: 'DataFlow',
-    location: 'Remote',
-    description: 'Backend Developer needed for our growing team. Must have experience with Node.js, Express, and SQL/NoSQL databases. Knowledge of microservices architecture is a plus.',
-    url: 'https://example.com/job/4',
-    postedDate: '2023-05-20',
-  },
-  {
-    id: '5',
-    title: 'DevOps Engineer',
-    company: 'CloudNative',
-    location: 'Seattle, WA',
-    description: 'DevOps Engineer with experience in Kubernetes, Docker, and CI/CD pipelines. You will be responsible for maintaining and improving our cloud infrastructure.',
-    url: 'https://example.com/job/5',
-    postedDate: '2023-05-17',
-  },
-];
+// Generate 100+ mock job listings
+const generateMockJobs = () => {
+  const companies = [
+    'TechCorp', 'InnovateTech', 'DesignHub', 'DataFlow', 'CloudNative', 
+    'DevWorks', 'CodeCraft', 'DigitalSolutions', 'FutureStack', 'SmartSystems',
+    'WebWizards', 'ByteBuilders', 'LogicLabs', 'NetNexus', 'AppArchitects',
+    'SoftSphere', 'Quantum Computing', 'CyberShield', 'AI Innovations', 'BlockChain Tech'
+  ];
+  
+  const titles = [
+    'Frontend Developer', 'Backend Developer', 'Full Stack Engineer', 'UI/UX Designer',
+    'DevOps Engineer', 'Data Scientist', 'Product Manager', 'Project Manager',
+    'Software Engineer', 'Mobile Developer', 'QA Engineer', 'Systems Architect',
+    'Cloud Engineer', 'Machine Learning Engineer', 'Cybersecurity Analyst',
+    'Technical Writer', 'Database Administrator', 'Network Engineer', 'Business Analyst',
+    'Scrum Master'
+  ];
+  
+  const locations = [
+    'Remote', 'San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA',
+    'Boston, MA', 'Chicago, IL', 'Los Angeles, CA', 'Denver, CO', 'Atlanta, GA',
+    'Portland, OR', 'Dallas, TX', 'Miami, FL', 'Washington, DC', 'Toronto, Canada',
+    'London, UK', 'Berlin, Germany', 'Tokyo, Japan', 'Sydney, Australia', 'Paris, France'
+  ];
+  
+  const skills = [
+    'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python',
+    'AWS', 'Docker', 'Kubernetes', 'SQL', 'NoSQL',
+    'HTML/CSS', 'Git', 'CI/CD', 'REST APIs', 'GraphQL',
+    'Vue.js', 'Angular', 'Java', 'C#', '.NET',
+    'PHP', 'Ruby', 'Go', 'Swift', 'Kotlin',
+    'Figma', 'Adobe XD', 'Sketch', 'Photoshop', 'Illustrator',
+    'Agile', 'Scrum', 'Jira', 'TDD', 'DevOps',
+    'Machine Learning', 'Data Analysis', 'Big Data', 'Blockchain', 'AR/VR'
+  ];
+  
+  const descriptions = [
+    'We are looking for a skilled developer to join our team. The ideal candidate should have experience in building modern applications.',
+    'Seeking an experienced engineer to work on our core product features. You will be responsible for designing and implementing new functionality.',
+    'Join our growing team to help build and maintain our cloud infrastructure. Experience with DevOps practices and tools is required.',
+    'Looking for a talented designer with a strong portfolio. You will be responsible for creating user-friendly interfaces for our products.',
+    'We need a data expert to help us extract insights from our vast datasets. Experience with data analysis and visualization is required.'
+  ];
+  
+  const salaryRanges = [
+    '$70,000 - $90,000', 
+    '$80,000 - $100,000', 
+    '$90,000 - $120,000', 
+    '$100,000 - $130,000', 
+    '$120,000 - $150,000',
+    '$140,000 - $180,000',
+    '$160,000 - $200,000'
+  ];
+  
+  const expLevels = ['Entry Level', 'Mid Level', 'Senior', 'Lead', 'Manager', 'Director'];
+  
+  // Generate dates within the last 30 days
+  const generateRecentDate = () => {
+    const now = new Date();
+    const daysAgo = Math.floor(Math.random() * 30);
+    now.setDate(now.getDate() - daysAgo);
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+  
+  // Generate job postings
+  const jobs = [];
+  for (let i = 1; i <= 120; i++) {
+    const companyIndex = Math.floor(Math.random() * companies.length);
+    const titleIndex = Math.floor(Math.random() * titles.length);
+    const locationIndex = Math.floor(Math.random() * locations.length);
+    const descIndex = Math.floor(Math.random() * descriptions.length);
+    const salaryIndex = Math.floor(Math.random() * salaryRanges.length);
+    const expIndex = Math.floor(Math.random() * expLevels.length);
+    
+    // Generate 3-6 random skills for this job
+    const jobSkills = [];
+    const numSkills = Math.floor(Math.random() * 4) + 3; // 3-6 skills
+    for (let j = 0; j < numSkills; j++) {
+      const skillIndex = Math.floor(Math.random() * skills.length);
+      if (!jobSkills.includes(skills[skillIndex])) {
+        jobSkills.push(skills[skillIndex]);
+      }
+    }
+    
+    // Create detailed job description
+    const baseDesc = descriptions[descIndex];
+    const skillsText = `Required skills include: ${jobSkills.join(', ')}.`;
+    const expText = `This is a ${expLevels[expIndex]} position.`;
+    const companyText = `${companies[companyIndex]} is a leading company in the technology sector.`;
+    const fullDesc = `${baseDesc} ${skillsText} ${expText} ${companyText}`;
+    
+    jobs.push({
+      id: `job-${i}`,
+      title: titles[titleIndex],
+      company: companies[companyIndex],
+      location: locations[locationIndex],
+      description: fullDesc,
+      type: Math.random() > 0.3 ? 'Full-time' : 'Contract',
+      salary: salaryRanges[salaryIndex],
+      posted: generateRecentDate(),
+      skills: jobSkills,
+      logo: null // In a real app, we'd have company logos
+    });
+  }
+  
+  return jobs;
+};
 
-// Function to extract text content from resume data (base64)
+// Create the mock jobs once
+const mockJobs = generateMockJobs();
+
+// Improved function to extract text content from resume data (base64)
 const extractResumeText = (resumeData: string): string => {
-  // In a real app, we would parse the PDF/DOCX file
-  // For this demo, we'll assume the data is already in text format
   try {
     // If it's base64, try to decode it
     return atob(resumeData.split(',')[1] || resumeData);
@@ -63,27 +123,62 @@ const extractResumeText = (resumeData: string): string => {
   }
 };
 
-// Function to compute similarity between two texts
-// This is a simple implementation - in a real app, you'd use an AI service
-const computeSimilarity = (text1: string, text2: string): number => {
-  // Convert to lowercase and tokenize
-  const tokens1 = text1.toLowerCase().split(/\W+/).filter(t => t.length > 2);
-  const tokens2 = text2.toLowerCase().split(/\W+/).filter(t => t.length > 2);
+// More sophisticated contextual similarity function
+const computeContextualSimilarity = (resumeText: string, jobText: string): number => {
+  // Convert to lowercase for case-insensitive matching
+  const resumeLower = resumeText.toLowerCase();
+  const jobLower = jobText.toLowerCase();
   
-  // Count matching tokens
-  const tokenSet1 = new Set(tokens1);
-  const tokenSet2 = new Set(tokens2);
+  // Extract potential skills and keywords (simple version)
+  const extractKeywords = (text: string): string[] => {
+    // Remove punctuation and split by whitespace
+    return text
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2); // Filter out very short words
+  };
   
-  let matchCount = 0;
-  for (const token of tokenSet1) {
-    if (tokenSet2.has(token)) {
-      matchCount++;
+  const resumeWords = extractKeywords(resumeLower);
+  const jobWords = extractKeywords(jobLower);
+  
+  // Count matching words with more weight for consecutive matches
+  let matchScore = 0;
+  let totalScore = 0;
+  
+  // Check for key terms in both texts
+  jobWords.forEach(word => {
+    // Skip common words to focus on important terms
+    const commonWords = ['and', 'the', 'for', 'with', 'this', 'that', 'our', 'your', 'their', 'are', 'will'];
+    if (commonWords.includes(word)) return;
+    
+    totalScore++;
+    if (resumeWords.includes(word)) {
+      matchScore++;
     }
-  }
+  });
   
-  // Calculate similarity
-  const totalUniqueTokens = new Set([...tokens1, ...tokens2]).size;
-  return totalUniqueTokens > 0 ? (matchCount / totalUniqueTokens) * 100 : 0;
+  // Add context matching - look for phrases (simplified)
+  const phrases = [
+    'years of experience', 'team player', 'communication skills',
+    'problem solving', 'attention to detail', 'time management',
+    'project management', 'customer service'
+  ];
+  
+  phrases.forEach(phrase => {
+    if (jobLower.includes(phrase)) {
+      totalScore += 2;
+      if (resumeLower.includes(phrase)) {
+        matchScore += 2;
+      }
+    }
+  });
+  
+  // Make sure totalScore is not zero to avoid division by zero
+  if (totalScore === 0) return 0;
+  
+  // Calculate percentage, ensure it's at least 20% to be more forgiving
+  const basePercentage = (matchScore / totalScore) * 100;
+  return Math.max(20, Math.min(99, basePercentage)); // Clamp between 20-99%
 };
 
 // Main function to search for jobs
@@ -100,11 +195,7 @@ export const searchJobs = async (
   // Extract text from resume
   const resumeText = extractResumeText(currentUser.resume.fileData);
   
-  // In a real app, we would:
-  // 1. Call a job search API or web scraper
-  // 2. Use an AI service to match resume with job descriptions
-  
-  // For this demo, we'll use our mock data and simple matching algorithm
+  // Filter and score jobs
   const jobMatches = mockJobs
     .filter(job => {
       // Apply filters based on preferences
@@ -126,12 +217,12 @@ export const searchJobs = async (
       return true;
     })
     .map(job => {
-      // Calculate match score
-      const matchScore = computeSimilarity(resumeText, job.description);
+      // Calculate match score using improved algorithm
+      const matchScore = computeContextualSimilarity(resumeText, job.description);
       
       return {
         ...job,
-        matchScore: Math.round(matchScore),
+        matchScore: Math.round(matchScore)
       };
     })
     .sort((a, b) => b.matchScore - a.matchScore); // Sort by match score (descending)

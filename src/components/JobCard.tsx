@@ -7,17 +7,19 @@ import MatchScore from './MatchScore';
 import { cn } from '@/lib/utils';
 
 export interface JobCardProps {
-  id: string;
+  id?: string;
   title: string;
   company: string;
   location: string;
-  type: string;
+  type?: string;
   salary?: string;
-  posted: string;
+  posted?: string;
+  postedDate?: string; // Added for compatibility with existing code
   description: string;
   matchScore: number;
-  skills: string[];
+  skills?: string[];
   logo?: string;
+  url?: string; // Added for compatibility with existing code
 }
 
 const JobCard = ({
@@ -25,15 +27,20 @@ const JobCard = ({
   title,
   company,
   location,
-  type,
+  type = 'Full-time',
   salary,
   posted,
+  postedDate, // Added for compatibility
   description,
   matchScore,
-  skills,
+  skills = [],
   logo,
+  url, // Added for compatibility
 }: JobCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Use either posted or postedDate (for backward compatibility)
+  const displayDate = posted || postedDate || 'Recently';
 
   const truncateDescription = (text: string, maxLength = 180) => {
     if (text.length <= maxLength) return text;
@@ -77,7 +84,7 @@ const JobCard = ({
             </Badge>
           )}
           <Badge variant="outline" className="font-normal text-muted-foreground">
-            Posted {posted}
+            Posted {displayDate}
           </Badge>
         </div>
         
@@ -122,7 +129,13 @@ const JobCard = ({
         </Button>
         <div className="flex space-x-2">
           <Button variant="outline" size="sm">Save</Button>
-          <Button size="sm" className="animated-button">Apply Now</Button>
+          <Button 
+            size="sm" 
+            className="animated-button"
+            onClick={() => url && window.open(url, '_blank')}
+          >
+            Apply Now
+          </Button>
         </div>
       </CardFooter>
     </Card>
