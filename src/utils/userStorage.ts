@@ -250,8 +250,8 @@ export async function preloadTestResume(): Promise<void> {
 
     console.log('Starting to preload test resume...');
 
-    // Fetch the resume file
-    const response = await fetch('/resume-kerwin.pdf');
+    // Fetch the sample software developer resume
+    const response = await fetch('/Sample_Software_Developer_Resume.pdf');
     if (!response.ok) {
       throw new Error(`Failed to fetch resume file: ${response.statusText}`);
     }
@@ -270,14 +270,14 @@ export async function preloadTestResume(): Promise<void> {
           console.log('Resume converted to base64');
           
           // Parse the resume
-          const file = new File([blob], 'resume-kerwin.pdf', { type: 'application/pdf' });
+          const file = new File([blob], 'Sample_Software_Developer_Resume.pdf', { type: 'application/pdf' });
           console.log('Created File object');
           
           const parsedResume = await parseResume(file);
           console.log('Resume parsed successfully');
           
           // Save the resume
-          await saveResume('resume-kerwin.pdf', base64Data, parsedResume.text || '');
+          await saveResume('Sample_Software_Developer_Resume.pdf', base64Data, parsedResume.text || '');
           console.log('Resume saved to user storage');
           
           resolve(undefined);
