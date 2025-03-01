@@ -1,132 +1,123 @@
-import { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { toast } from 'react-hot-toast';
+import { parseResume } from '../utils/resumeParser';
+import { saveResume } from '../utils/userStorage';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 interface ResumeUploadProps {
   className?: string;
   onUploadComplete?: (fileName: string, fileData: string) => void;
+  onUploadSuccess?: () => void;
 }
 
-const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
-  const [isDragging, setIsDragging] = useState(false);
+export const ResumeUpload: React.FC<ResumeUploadProps> = ({ className, onUploadComplete, onUploadSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && isValidFile(droppedFile)) {
-      handleFileSelection(droppedFile);
-    } else {
-      toast({
-        title: "Invalid file",
-        description: "Please upload a PDF, DOCX, or TXT file.",
-        variant: "destructive"
-      });
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) {
+      toast.error('Please upload a valid PDF, DOCX, or TXT file');
+      return;
     }
-  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && isValidFile(selectedFile)) {
-      handleFileSelection(selectedFile);
-    } else if (selectedFile) {
-      toast({
-        title: "Invalid file",
-        description: "Please upload a PDF, DOCX, or TXT file.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const isValidFile = (file: File) => {
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-    return validTypes.includes(file.type);
-  };
-
-  const handleFileSelection = (selectedFile: File) => {
-    setFile(selectedFile);
-    simulateUpload(selectedFile);
-  };
-
-  const simulateUpload = (uploadedFile: File) => {
+    const uploadedFile = acceptedFiles[0];
+    setFile(uploadedFile);
     setIsUploading(true);
     setUploadProgress(0);
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const fileData = e.target?.result as string;
-      
+
+    try {
+      // Simulate upload progress
       const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 100) {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
             clearInterval(interval);
-            setIsUploading(false);
-            
-            toast({
-              title: "Upload complete",
-              description: `Successfully uploaded ${uploadedFile.name}`,
-            });
-            
-            if (onUploadComplete) {
-              onUploadComplete(uploadedFile.name, fileData);
-            }
-            
-            return 100;
+            return 90;
           }
-          return prev + 5;
+          return prev + 10;
         });
-      }, 100);
-    };
-    
-    reader.onerror = () => {
-      setIsUploading(false);
-      toast({
-        title: "Upload failed",
-        description: "Failed to read the file",
-        variant: "destructive"
+      }, 200);
+
+      // First read the file as base64
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Keep the data URL prefix as we'll need it for proper file handling
+          resolve(result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(uploadedFile);
       });
-    };
-    
-    reader.readAsDataURL(uploadedFile);
-  };
+
+      // Also read as text for parsing
+      const textData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsText(uploadedFile);
+      });
+
+      // Parse the resume
+      const parsedResume = await parseResume(uploadedFile);
+      
+      // Save the resume with both raw data and parsed text
+      await saveResume(uploadedFile.name, base64Data, parsedResume.text || textData);
+      
+      // Complete the upload
+      clearInterval(interval);
+      setUploadProgress(100);
+      toast.success('Resume uploaded successfully!');
+      
+      // Call callbacks
+      onUploadComplete?.(uploadedFile.name, base64Data);
+      onUploadSuccess?.();
+    } catch (error) {
+      console.error('Error uploading resume:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload resume');
+      setFile(null);
+      setUploadProgress(0);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [onUploadComplete, onUploadSuccess]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt']
+    },
+    maxFiles: 1,
+    disabled: isUploading
+  });
 
   const fileIcon = () => {
     if (!file) return null;
     
-    if (file.type === 'application/pdf') {
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
-    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
-    } else {
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
+    switch (file.type) {
+      case 'application/pdf':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
     }
   };
 
@@ -134,17 +125,14 @@ const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
     <div className={cn("w-full", className)}>
       {!file ? (
         <div
+          {...getRootProps()}
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ease-in-out",
-            isDragging 
-              ? "border-primary bg-primary/5" 
-              : "border-border hover:border-primary/50 hover:bg-accent/50",
-            className
+            isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400",
+            isUploading ? "opacity-50 cursor-not-allowed" : ""
           )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
         >
+          <input {...getInputProps()} />
           <div className="flex flex-col items-center space-y-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -162,24 +150,17 @@ const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
             </svg>
             <div>
               <h3 className="text-lg font-medium mb-1">Upload your resume</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Drag and drop your file here or click to browse
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Supports PDF, DOCX, or TXT (Max 5MB)
-              </p>
+              {isUploading ? (
+                <p className="text-gray-600">Uploading resume...</p>
+              ) : isDragActive ? (
+                <p className="text-blue-600">Drop your resume here</p>
+              ) : (
+                <>
+                  <p className="text-gray-600">Drag and drop your resume here, or click to select</p>
+                  <p className="text-sm text-gray-500">Supported formats: PDF, DOCX, TXT</p>
+                </>
+              )}
             </div>
-            <label>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.docx,.txt"
-                onChange={handleFileChange}
-              />
-              <Button type="button" variant="outline" className="mt-2">
-                Browse Files
-              </Button>
-            </label>
           </div>
         </div>
       ) : (
@@ -210,7 +191,7 @@ const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
               </div>
               <Progress value={uploadProgress} className="h-1.5" />
             </div>
-          ) : (
+          ) : uploadProgress === 100 ? (
             <div className="flex justify-end">
               <Button variant="ghost" size="sm" className="text-green-600">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -219,7 +200,7 @@ const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
                 Uploaded
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

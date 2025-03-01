@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,7 @@ const SignUp = () => {
     try {
       setIsLoading(true);
       
-      // Save user data (in a real app, we'd send this to a backend)
+      // Save user data
       saveUser({
         name: formData.name,
         email: formData.email,
@@ -66,15 +65,15 @@ const SignUp = () => {
       
       toast({
         title: "Account created!",
-        description: "Welcome to Smart Job Finder. Complete your profile to get started."
+        description: "Welcome to Smart Job Finder. Let's upload your resume to get started."
       });
       
-      // Navigate to profile completion page
+      // Navigate to profile page for resume upload
       navigate('/profile');
     } catch (error) {
       toast({
         title: "Sign up failed",
-        description: "There was an error creating your account. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error creating your account. Please try again.",
         variant: "destructive"
       });
     } finally {

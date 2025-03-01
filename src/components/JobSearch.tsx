@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -8,12 +7,15 @@ import { searchJobs, getJobSearchResults } from '@/utils/jobSearchService';
 import { getCurrentUser } from '@/utils/userStorage';
 import JobCard from '@/components/JobCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import JobFilters from './JobFilters';
+import { JobMatch } from '@/utils/userStorage';
 
-const JobSearch = () => {
+const JobSearch: React.FC = () => {
   const { toast } = useToast();
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchCompleted, setSearchCompleted] = useState(false);
-  const [jobResults, setJobResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [jobs, setJobs] = useState<JobMatch[]>([]);
+  const [filters, setFilters] = useState({});
+  const currentUser = getCurrentUser();
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,65 +26,29 @@ const JobSearch = () => {
     // Check if we already have search results
     const results = getJobSearchResults();
     if (results && results.jobs.length > 0) {
-      setJobResults(results.jobs);
+      setJobs(results.jobs);
       setTotalPages(Math.ceil(results.jobs.length / resultsPerPage));
-      setSearchCompleted(true);
     }
   }, [resultsPerPage]);
   
   const handleSearch = async () => {
-    const currentUser = getCurrentUser();
-    
-    if (!currentUser) {
-      toast({
-        title: "Not logged in",
-        description: "Please log in to search for jobs",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!currentUser.resume) {
-      toast({
-        title: "Resume required",
-        description: "Please upload your resume before searching for jobs",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSearching(true);
-    setSearchCompleted(false);
-    
+    setIsLoading(true);
     try {
-      // Start job search with user preferences
-      await searchJobs(
-        currentUser.preferences?.industries,
-        currentUser.preferences?.remote,
-        currentUser.preferences?.salaryRange
-      );
+      // Use the current user's location if no location filter is set
+      const searchFilters = {
+        ...filters,
+        location: filters.location || currentUser?.location || '',
+      };
       
-      // Get search results
-      const results = getJobSearchResults();
+      const results = await searchJobs(searchFilters);
+      setJobs(results);
+      setTotalPages(Math.ceil(results.length / resultsPerPage));
+      setCurrentPage(1); // Reset to first page
       
-      if (results && results.jobs.length > 0) {
-        setJobResults(results.jobs);
-        setTotalPages(Math.ceil(results.jobs.length / resultsPerPage));
-        setCurrentPage(1); // Reset to first page
-        
-        toast({
-          title: "Job search complete",
-          description: `Found ${results.jobs.length} matching jobs based on your resume`,
-        });
-      } else {
-        setJobResults([]);
-        toast({
-          title: "No matches found",
-          description: "Try adjusting your preferences or updating your resume",
-        });
-      }
-      
-      setSearchCompleted(true);
+      toast({
+        title: "Job search complete",
+        description: `Found ${results.length} matching jobs based on your preferences`,
+      });
     } catch (error) {
       toast({
         title: "Search failed",
@@ -90,15 +56,19 @@ const JobSearch = () => {
         variant: "destructive"
       });
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
+  };
+  
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters(newFilters);
   };
   
   // Get current page results
   const getCurrentPageResults = () => {
     const indexOfLastResult = currentPage * resultsPerPage;
     const indexOfFirstResult = indexOfLastResult - resultsPerPage;
-    return jobResults.slice(indexOfFirstResult, indexOfLastResult);
+    return jobs.slice(indexOfFirstResult, indexOfLastResult);
   };
   
   // Handle pagination
@@ -118,108 +88,106 @@ const JobSearch = () => {
   
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <h2 className="text-xl font-semibold">AI-Powered Job Search</h2>
-            <p className="text-muted-foreground">
-              Our AI will search for jobs that match your resume and preferences.
-              We'll analyze your skills and experience to find the best matches.
-            </p>
-            
-            <Button 
-              onClick={handleSearch} 
-              disabled={isSearching}
-              size="lg"
-              className="mt-4"
-            >
-              {isSearching ? (
-                <>
-                  <Spinner className="mr-2 h-4 w-4" />
-                  Searching...
-                </>
-              ) : "Start Job Search"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <JobFilters onFiltersChange={handleFiltersChange} />
       
-      {isSearching && (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Spinner className="h-12 w-12 text-primary" />
-          <p className="text-lg font-medium">Searching for matching jobs...</p>
-          <p className="text-muted-foreground text-center max-w-md">
-            Our AI is analyzing your resume and searching for jobs that match your skills and experience.
-            This might take a moment.
-          </p>
-        </div>
-      )}
+      <Button 
+        onClick={handleSearch} 
+        disabled={isLoading}
+        className="w-full"
+      >
+        {isLoading ? "Searching..." : "Search Jobs"}
+      </Button>
       
-      {searchCompleted && jobResults.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold">Results ({jobResults.length} jobs found)</h3>
-            <div className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * resultsPerPage + 1}-
-              {Math.min(currentPage * resultsPerPage, jobResults.length)} of {jobResults.length}
-            </div>
-          </div>
+      {jobs.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">
+            Found {jobs.length} matching jobs
+          </h2>
           
-          <div className="space-y-4">
+          <div className="grid gap-4">
             {getCurrentPageResults().map((job) => (
-              <JobCard 
+              <div
                 key={job.id}
-                id={job.id}
-                title={job.title}
-                company={job.company}
-                location={job.location}
-                description={job.description}
-                matchScore={job.matchScore}
-                type={job.type}
-                salary={job.salary}
-                posted={job.posted}
-                skills={job.skills}
-                logo={job.logo}
-                url={job.url}
-              />
+                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold">{job.title}</h3>
+                    <p className="text-muted-foreground">{job.company}</p>
+                  </div>
+                  <span className="text-sm bg-primary/10 px-2 py-1 rounded">
+                    Match: {job.matchScore}%
+                  </span>
+                </div>
+                
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm">📍 {job.location}</p>
+                  {job.salary !== 'Not specified' && (
+                    <p className="text-sm">💰 {job.salary}</p>
+                  )}
+                  <p className="text-sm">📅 Posted: {new Date(job.postedDate).toLocaleDateString()}</p>
+                </div>
+
+                {job.requirements.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium">Key Requirements:</p>
+                    <ul className="text-sm list-disc list-inside">
+                      {job.requirements.slice(0, 3).map((req, index) => (
+                        <li key={index}>{req}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <a
+                    href={job.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    View Job →
+                  </a>
+                </div>
+              </div>
             ))}
           </div>
-          
-          {/* Pagination controls */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToPrevPage}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <div className="text-sm">
-                Page {currentPage} of {totalPages}
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          )}
         </div>
       )}
       
-      {searchCompleted && jobResults.length === 0 && (
+      {jobs.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <p className="text-lg font-medium">No matching jobs found</p>
           <p className="text-muted-foreground mt-2">
             Try adjusting your preferences or updating your resume to improve matches.
           </p>
+        </div>
+      )}
+      
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center space-x-2 pt-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goToPrevPage}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <div className="text-sm">
+            Page {currentPage} of {totalPages}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         </div>
       )}
     </div>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,8 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome back to Smart Job Finder."
         });
+        
+        // Navigate to profile page
         navigate('/profile');
       } else {
         toast({

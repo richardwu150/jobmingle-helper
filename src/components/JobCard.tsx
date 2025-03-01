@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import MatchScore from './MatchScore';
 import { cn } from '@/lib/utils';
+import { ExternalLink, MapPin, Building, Calendar } from 'lucide-react';
 
 export interface JobCardProps {
   id?: string;
@@ -20,6 +20,7 @@ export interface JobCardProps {
   skills?: string[];
   logo?: string;
   url?: string; // Added for compatibility with existing code
+  requirements?: string[];
 }
 
 const JobCard = ({
@@ -36,11 +37,22 @@ const JobCard = ({
   skills = [],
   logo,
   url, // Added for compatibility
+  requirements
 }: JobCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Use either posted or postedDate (for backward compatibility)
   const displayDate = posted || postedDate || 'Recently';
+
+  // Format the posted date
+  const formattedDate = new Date(postedDate || '').toLocaleDateString();
+  
+  // Get match score color
+  const getMatchScoreColor = (score: number) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
+    return 'bg-blue-500';
+  };
 
   const truncateDescription = (text: string, maxLength = 180) => {
     if (text.length <= maxLength) return text;
@@ -70,7 +82,13 @@ const JobCard = ({
             </div>
           </div>
         </div>
-        <MatchScore score={matchScore} />
+        <div className="absolute top-4 right-4">
+          <Badge 
+            className={`${getMatchScoreColor(matchScore)} text-white px-3 py-1 text-sm font-medium`}
+          >
+            {matchScore}% Match
+          </Badge>
+        </div>
       </CardHeader>
       
       <CardContent className="pb-3 space-y-4">
@@ -114,6 +132,22 @@ const JobCard = ({
                   {skill}
                 </Badge>
               ))}
+            </div>
+          </div>
+        )}
+
+        {requirements && requirements.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Key Requirements</h4>
+            <div className="flex flex-wrap gap-2">
+              {requirements.slice(0, 5).map((req, index) => (
+                <Badge key={index} variant="secondary">
+                  {req}
+                </Badge>
+              ))}
+              {requirements.length > 5 && (
+                <Badge variant="secondary">+{requirements.length - 5} more</Badge>
+              )}
             </div>
           </div>
         )}

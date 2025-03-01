@@ -1,19 +1,58 @@
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import ProfileForm from '@/components/ProfileForm';
 import JobSearch from '@/components/JobSearch';
 import Navbar from '@/components/Navbar';
-import { isLoggedIn } from '@/utils/userStorage';
+import { isLoggedIn, getCurrentUser, preloadTestResume } from '@/utils/userStorage';
+
+interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  skills?: string[];
+  education?: {
+    school: string;
+    degree: string;
+    fieldOfStudy: string;
+    startDate: string;
+    endDate?: string;
+    description?: string;
+  }[];
+  experience?: {
+    company: string;
+    position: string;
+    startDate: string;
+    endDate?: string;
+    description?: string;
+  }[];
+  projects?: {
+    name: string;
+    description?: string;
+    url?: string;
+  }[];
+  links?: {
+    platform: string;
+    url: string;
+  }[];
+}
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('profile');
   
   // Check if user is logged in, if not redirect to login
   useEffect(() => {
     if (!isLoggedIn()) {
       navigate('/login');
+    } else {
+      // Always load the test resume when logged in
+      preloadTestResume().catch(console.error);
     }
   }, [navigate]);
 
@@ -24,7 +63,7 @@ const Profile = () => {
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-8 text-center">Your Profile</h1>
         
-        <Tabs defaultValue="profile" className="max-w-4xl mx-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="profile">Profile Information</TabsTrigger>
             <TabsTrigger value="jobs">Job Search</TabsTrigger>
