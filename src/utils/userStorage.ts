@@ -3,6 +3,7 @@ interface UserData {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   preferences?: {
     industries?: string[];
     remote?: boolean;
@@ -21,6 +22,19 @@ interface UserData {
     fileData: string;
     uploadDate: string;
   };
+  jobSearchResults?: JobMatch[];
+}
+
+interface JobMatch {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  url: string;
+  matchScore: number;
+  postedDate: string;
+  appliedDate?: string;
 }
 
 // User storage functions

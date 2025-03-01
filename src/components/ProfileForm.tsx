@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -164,7 +163,7 @@ const ProfileForm = () => {
             <div className="space-y-2">
               <Label>Your Resume</Label>
               <ResumeUpload 
-                onUploadComplete={(fileName, fileData) => {
+                onUploadComplete={(fileName: string, fileData: string) => {
                   updateCurrentUser({
                     resume: {
                       fileName,

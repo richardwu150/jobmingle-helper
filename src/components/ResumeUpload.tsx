@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -7,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface ResumeUploadProps {
   className?: string;
-  onUploadComplete?: (file: File) => void;
+  onUploadComplete?: (fileName: string, fileData: string) => void;
 }
 
 const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
@@ -69,26 +68,42 @@ const ResumeUpload = ({ className, onUploadComplete }: ResumeUploadProps) => {
     setIsUploading(true);
     setUploadProgress(0);
     
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          
-          toast({
-            title: "Upload complete",
-            description: `Successfully uploaded ${uploadedFile.name}`,
-          });
-          
-          if (onUploadComplete) {
-            onUploadComplete(uploadedFile);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const fileData = e.target?.result as string;
+      
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setIsUploading(false);
+            
+            toast({
+              title: "Upload complete",
+              description: `Successfully uploaded ${uploadedFile.name}`,
+            });
+            
+            if (onUploadComplete) {
+              onUploadComplete(uploadedFile.name, fileData);
+            }
+            
+            return 100;
           }
-          
-          return 100;
-        }
-        return prev + 5;
+          return prev + 5;
+        });
+      }, 100);
+    };
+    
+    reader.onerror = () => {
+      setIsUploading(false);
+      toast({
+        title: "Upload failed",
+        description: "Failed to read the file",
+        variant: "destructive"
       });
-    }, 100);
+    };
+    
+    reader.readAsDataURL(uploadedFile);
   };
 
   const fileIcon = () => {
