@@ -92,8 +92,8 @@ export function updateCurrentUser(updates: Partial<UserData>): void {
   }
 }
 
-// Update save resume function to handle both raw data and parsed text
-export async function saveResume(fileName: string, fileData: string, parsedText: string): Promise<void> {
+// Update save resume function to handle both File objects and raw data
+export async function saveResume(file: File | string, parsedResume: { text: string }): Promise<void> {
   try {
     // First check if user is logged in
     if (!isLoggedIn()) {
@@ -105,12 +105,29 @@ export async function saveResume(fileName: string, fileData: string, parsedText:
       throw new Error('No user found');
     }
 
+    // Convert File to base64 if needed
+    let fileData: string;
+    let fileName: string;
+
+    if (file instanceof File) {
+      // Handle File object
+      fileName = file.name;
+      const buffer = await file.arrayBuffer();
+      fileData = btoa(
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+    } else {
+      // Handle string input (base64)
+      fileName = file;
+      fileData = file;
+    }
+
     // Create the resume update object
     const resumeUpdate = {
       fileName,
-      fileData, // This is the base64 data
+      fileData,
       uploadDate: new Date().toISOString(),
-      parsedText // This is the extracted text content
+      parsedText: parsedResume.text
     };
 
     // Update both the current user and the users array
@@ -136,6 +153,8 @@ export async function saveResume(fileName: string, fileData: string, parsedText:
     if (!verifyUser?.resume?.fileData) {
       throw new Error('Failed to save resume data');
     }
+
+    console.log('Resume saved successfully:', fileName);
   } catch (error) {
     console.error('Error saving resume:', error);
     throw error;
@@ -242,64 +261,48 @@ export const hasCompletedOnboarding = (): boolean => {
 // Function to preload test resume for development
 export async function preloadTestResume(): Promise<void> {
   try {
+    console.log('Starting to preload chef resume...');
+    
+    // Ensure user is logged in
     const currentUser = getCurrentUser();
     if (!currentUser || !currentUser.id) {
       console.error('No user found to preload resume');
       return;
     }
 
-    console.log('Starting to preload test resume...');
-
-    // Fetch the sample software developer resume
-    const response = await fetch('/Sample_Software_Developer_Resume.pdf');
+    // Fetch the resume file
+    const response = await fetch('/chef-resume.pdf');
     if (!response.ok) {
       throw new Error(`Failed to fetch resume file: ${response.statusText}`);
     }
-
+    
     const blob = await response.blob();
     console.log('Resume file fetched successfully, size:', blob.size);
     
-    // Convert to base64
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
+    // Convert to File object
+    const file = new File([blob], 'chef-resume.pdf', { type: 'application/pdf' });
+    console.log('Created File object');
     
-    await new Promise((resolve, reject) => {
-      reader.onload = async () => {
-        try {
-          const base64Data = reader.result as string;
-          console.log('Resume converted to base64');
-          
-          // Parse the resume
-          const file = new File([blob], 'Sample_Software_Developer_Resume.pdf', { type: 'application/pdf' });
-          console.log('Created File object');
-          
-          const parsedResume = await parseResume(file);
-          console.log('Resume parsed successfully');
-          
-          // Save the resume
-          await saveResume('Sample_Software_Developer_Resume.pdf', base64Data, parsedResume.text || '');
-          console.log('Resume saved to user storage');
-          
-          resolve(undefined);
-        } catch (error) {
-          console.error('Error in reader.onload:', error);
-          reject(error);
-        }
-      };
-      reader.onerror = (error) => {
-        console.error('Error reading file:', error);
-        reject(error);
-      };
-    });
-
+    // Parse the resume
+    const parsedResume = await parseResume(file);
+    if (!parsedResume || !parsedResume.text) {
+      throw new Error('Failed to parse resume text');
+    }
+    console.log('Resume parsed successfully');
+    
+    // Save the resume
+    await saveResume(file, parsedResume);
+    console.log('Resume saved to user storage');
+    
     // Verify the resume was saved
     const updatedUser = getCurrentUser();
     if (!updatedUser?.resume?.fileData) {
       throw new Error('Resume was not saved properly');
     }
-    console.log('Resume preload completed successfully');
+    
+    console.log('Chef resume preload completed successfully');
   } catch (error) {
-    console.error('Error preloading test resume:', error);
-    throw error; // Re-throw to handle in the calling code
+    console.error('Error preloading chef resume:', error);
+    throw error;
   }
 }

@@ -318,55 +318,129 @@ export async function searchJobs(options: JobSearchOptions = {}): Promise<JobMat
 }
 
 function extractKeywords(text: string): string[] {
-  // Common job-related terms to boost
+  // Culinary and hospitality job terms
   const jobTerms = new Set([
-    'developer', 'engineer', 'software', 'web', 'mobile', 'frontend', 'backend',
-    'fullstack', 'full-stack', 'programmer', 'architect', 'lead', 'senior', 'junior',
-    'development', 'engineering', 'application', 'apps', 'systems', 'devops', 'cloud'
+    'chef', 'cook', 'sous', 'executive', 'pastry', 'culinary', 'kitchen',
+    'restaurant', 'hospitality', 'catering', 'food', 'service', 'dining',
+    'head', 'lead', 'senior', 'junior', 'line', 'prep', 'garde', 'manger',
+    'banquet', 'cafeteria', 'bistro', 'hotel', 'resort'
   ]);
 
-  // Technical skills to identify
-  const techSkills = new Set([
-    'javascript', 'typescript', 'python', 'java', 'c++', 'ruby', 'php', 'swift',
-    'kotlin', 'flutter', 'react', 'angular', 'vue', 'node', 'express', 'django',
-    'spring', 'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'sql', 'nosql',
-    'mongodb', 'postgresql', 'mysql', 'redis', 'graphql', 'rest', 'api'
+  // Culinary skills and techniques
+  const culinarySkills = new Set([
+    // Cooking Methods
+    'baking', 'broiling', 'grilling', 'sauteing', 'braising', 'roasting',
+    'frying', 'poaching', 'smoking', 'sous-vide', 'blanching',
+    
+    // Kitchen Skills
+    'knife', 'plating', 'garnishing', 'butchery', 'mise', 'inventory',
+    'menu', 'recipe', 'portion', 'cost', 'safety', 'sanitation', 'haccp',
+    
+    // Cuisine Types
+    'french', 'italian', 'asian', 'mediterranean', 'mexican', 'japanese',
+    'chinese', 'thai', 'indian', 'fusion', 'contemporary', 'traditional',
+    
+    // Management Skills
+    'supervision', 'training', 'scheduling', 'ordering', 'budgeting',
+    'purchasing', 'quality', 'control', 'leadership', 'team'
+  ]);
+
+  // Words to ignore (expanded)
+  const commonWords = new Set([
+    // Basic stop words
+    'the', 'and', 'for', 'that', 'with', 'this', 'our', 'your', 'will', 'have',
+    'from', 'they', 'what', 'about', 'when', 'make', 'can', 'all', 'been', 'were',
+    'into', 'some', 'than', 'its', 'time', 'only', 'could', 'other', 'these',
+    
+    // Common resume words to ignore
+    'resume', 'experience', 'year', 'years', 'month', 'months', 'responsible',
+    'duties', 'including', 'included', 'worked', 'work', 'working', 'etc',
+    'various', 'related', 'multiple', 'using', 'used', 'well', 'also', 'able',
+    'within', 'every', 'daily', 'weekly', 'monthly', 'duties', 'responsibility'
   ]);
 
   // Split text into words and clean them
   const words = text.toLowerCase()
-    .replace(/[^\w\s-]/g, ' ')  // Keep hyphens for terms like 'full-stack'
+    .replace(/[^\w\s-]/g, ' ')  // Keep hyphens for compound terms
     .split(/\s+/)
-    .filter(word => word.length > 2);
+    .filter(word => word.length > 2);  // Filter out very short words
   
-  // Count word frequency with boosted weights for job terms and tech skills
+  // Count word frequency with context-aware boosting
   const frequency: { [key: string]: number } = {};
-  words.forEach(word => {
+  const windowSize = 3; // Look at surrounding words for context
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
     if (!commonWords.has(word)) {
+      // Get surrounding words for context
+      const prevWord = i > 0 ? words[i - 1] : '';
+      const nextWord = i < words.length - 1 ? words[i + 1] : '';
+      const twoWordPhrase = prevWord + ' ' + word;
+      const phraseWithNext = word + ' ' + nextWord;
+
+      // Base weight
       let weight = 1;
-      if (jobTerms.has(word)) weight = 3;  // Boost job-related terms
-      if (techSkills.has(word)) weight = 2; // Boost technical skills
+
+      // Boost job titles and roles
+      if (jobTerms.has(word)) {
+        weight = 3;
+        // Extra boost for compound job titles (e.g., "sous chef", "head chef")
+        if (jobTerms.has(prevWord) || jobTerms.has(nextWord)) {
+          weight = 4;
+        }
+      }
+
+      // Boost culinary skills
+      if (culinarySkills.has(word)) {
+        weight = 2;
+        // Extra boost for compound skills (e.g., "knife skills", "menu planning")
+        if (culinarySkills.has(prevWord) || culinarySkills.has(nextWord)) {
+          weight = 3;
+        }
+      }
+
+      // Boost for years of experience mentions
+      if (prevWord.match(/^\d+$/) && (word === 'year' || word === 'years')) {
+        weight = 2.5;
+      }
+
+      // Add to frequency with weight
       frequency[word] = (frequency[word] || 0) + weight;
+
+      // Add compound phrases if they're meaningful
+      if (jobTerms.has(twoWordPhrase) || culinarySkills.has(twoWordPhrase)) {
+        frequency[twoWordPhrase] = (frequency[twoWordPhrase] || 0) + weight + 1;
+      }
+      if (jobTerms.has(phraseWithNext) || culinarySkills.has(phraseWithNext)) {
+        frequency[phraseWithNext] = (frequency[phraseWithNext] || 0) + weight + 1;
+      }
     }
-  });
+  }
   
   // Get keywords sorted by frequency and boosted weights
   const keywords = Object.entries(frequency)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 15)
+    .slice(0, 12)  // Reduced from 15 to focus on most relevant terms
     .map(([word]) => word);
 
   // Ensure we have at least one job title term
   const hasJobTitle = keywords.some(word => jobTerms.has(word));
   if (!hasJobTitle) {
-    // Add a default job title based on found tech skills
-    const foundTechSkills = keywords.filter(word => techSkills.has(word));
-    if (foundTechSkills.length > 0) {
-      keywords.unshift(foundTechSkills[0] + ' developer');
+    // Add a default job title based on found skills
+    const foundSkills = keywords.filter(word => culinarySkills.has(word));
+    if (foundSkills.length > 0) {
+      keywords.unshift(foundSkills[0] + ' chef');
     } else {
-      keywords.unshift('software developer');
+      keywords.unshift('chef');
     }
   }
+
+  // Log the extracted keywords for debugging
+  console.log('Extracted keywords:', keywords);
+  console.log('Keyword weights:', keywords.map(k => ({ 
+    keyword: k, 
+    weight: frequency[k]
+  })));
 
   return keywords;
 }
@@ -552,13 +626,6 @@ function levenshteinDistance(a: string, b: string): number {
 
   return matrix[b.length][a.length];
 }
-
-// Common words to filter out
-const commonWords = new Set([
-  'the', 'and', 'for', 'that', 'with', 'this', 'our', 'your', 'will', 'have',
-  'from', 'they', 'what', 'about', 'when', 'make', 'can', 'all', 'been', 'were',
-  'into', 'some', 'than', 'its', 'time', 'only', 'could', 'other', 'these'
-]);
 
 function storeJobSearchResults(jobs: JobMatch[]): void {
   const currentUser = getCurrentUser();
